@@ -1,0 +1,4 @@
+- [ ] add README.org
+- [ ] create GitHub repo for winlay and push local repo
+
+- [X] "Caskify" package winlay

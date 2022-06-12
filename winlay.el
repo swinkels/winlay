@@ -1,4 +1,6 @@
-;; winlay.el --- Provide commands to layout Emacs windows and X windows
+;;; winlay.el --- Provide commands to layout Emacs windows and X windows
+
+;;; Version: 0.0.0
 
 (defun show-server ()
   (interactive)
@@ -9,7 +11,7 @@
       (split-window-vertically -18)
       (other-window 1)
       (switch-to-buffer pdb-buffer)
-      (end-of-buffer)
+      (goto-char (point-max))
       (other-window 1))
     pdb-buffer))
 
@@ -37,4 +39,4 @@
 
 (provide 'winlay)
 
-;; winlay.el --- Provide command to select and activate tox virtualenv
+;;; winlay.el ends here
