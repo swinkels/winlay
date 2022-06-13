@@ -5,9 +5,17 @@
 
 (provide 'winlay)
 
-(defvar other-window-id nil "ID of window to tile with")
+(defvar winlay--other-xwindow nil "ID of X window to tile with")
 
-(defun show-server ()
+(defun winlay-pull-up-buffer-and-tile-xwindows ()
+  (interactive)
+  (when (winlay--pull-up-buffer)
+    (unless winlay--other-xwindow
+      (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
+    (winlay-tile-xwindows winlay--other-xwindow)
+    (winlay-move-focus winlay--other-xwindow)))
+
+(defun winlay--pull-up-buffer ()
   (interactive)
   (let ((pdb-buffer (get-buffer "*gud-pdb*")))
     (if (not pdb-buffer)
@@ -20,23 +28,15 @@
       (other-window 1))
     pdb-buffer))
 
-(defun show-server-and-layout-xwindows ()
-  (interactive)
-  (when (show-server)
-    (unless other-window-id
-      (setq other-window-id (select-other-window-id)))
-    (layout-xwindows other-window-id)))
-
-(defun layout-xwindows (other-window-id)
+(defun winlay-tile-xwindows (other-xwindow)
   (snap-current-terminal-to-right)
-  (snap-window-to-left other-window-id)
-  (move-focus-to-window other-window-id))
+  (snap-window-to-left other-xwindow))
 
-(defun select-other-window-id ()
-  (let* ((window-ids (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox")))
-         (window-names (mapcar 'get-window-name window-ids)))
-    (cdr (assoc (helm-comp-read "Select window to tile: " window-names)
-                (mapcar* #'cons window-names window-ids)))))
+(defun winlay--ask-for-other-xwindow ()
+  (let* ((xwindow-ids (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox")))
+         (xwindow-names (mapcar 'get-window-name xwindow-ids)))
+    (cdr (assoc (helm-comp-read "Select window to tile: " xwindow-names)
+                (mapcar* #'cons xwindow-names xwindow-ids)))))
 
 (defun drop-xdotool-debug-output (xdotool-output)
   (seq-remove '(lambda (line) (string-prefix-p "command: " line)) xdotool-output))
@@ -50,9 +50,9 @@
 (defun snap-window-to-left (window-id)
   (call-process "xdotool" nil nil nil "windowstate" "--remove" "MAXIMIZED_HORZ" window-id "windowsize" window-id "1280" "1373" "windowmove" window-id "1920" "0" "windowactivate" window-id))
 
-(defun move-focus-to-window (window-id)
-  (call-process "xdotool" nil nil nil "windowactivate" window-id))
+(defun winlay-move-focus (xwindow)
+  (call-process "xdotool" nil nil nil "windowactivate" xwindow))
 
-(global-set-key (kbd "<f5>") 'show-server-and-layout-xwindows)
+(global-set-key (kbd "<f5>") 'winlay-pull-up-buffer-and-tile-xwindows)
 
 ;;; winlay.el ends here
