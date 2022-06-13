@@ -7,10 +7,10 @@
 
 (defvar winlay--other-xwindow nil "ID of X window to tile with")
 
-(defun winlay-pull-up-buffer-and-tile-xwindows ()
-  (interactive)
+(defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
+  (interactive "P")
   (when (winlay--pull-up-buffer)
-    (unless winlay--other-xwindow
+    (when (or ask-for-other-xwindow (not winlay--other-xwindow))
       (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
     (winlay-tile-xwindows winlay--other-xwindow)
     (winlay-move-focus winlay--other-xwindow)))
