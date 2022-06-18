@@ -5,21 +5,23 @@
 
 (provide 'winlay)
 
+(setq winlay-pull-up-buffer-name-0 "*gud-pdb*")
+
 (defvar winlay--other-xwindow nil "ID of X window to tile with")
 
 (defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
   (interactive "P")
-  (when (winlay--pull-up-buffer)
+  (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
     (when (or ask-for-other-xwindow (not winlay--other-xwindow))
       (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
     (winlay-tile-xwindows winlay--other-xwindow)
     (winlay-move-focus winlay--other-xwindow)))
 
-(defun winlay--pull-up-buffer ()
+(defun winlay--pull-up-buffer-by-name (buffer-name)
   (interactive)
-  (let ((pdb-buffer (get-buffer "*gud-pdb*")))
+  (let ((pdb-buffer (get-buffer buffer-name)))
     (if (not pdb-buffer)
-        (message "Unable to show server buffer: no buffer named *gud-pdb* found")
+        (message (concat "Unable to show server buffer: no buffer named " buffer-name " found"))
       (delete-other-windows)
       (split-window-vertically -18)
       (other-window 1)
