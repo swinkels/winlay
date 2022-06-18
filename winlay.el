@@ -45,10 +45,11 @@
   (car (drop-xdotool-debug-output (process-lines "xdotool" "getwindowname" window-id))))
 
 (defun snap-current-terminal-to-right ()
-  (call-process "xdotool" nil nil nil "getactivewindow" "windowstate" "--remove" "MAXIMIZED_HORZ" "windowstate" "--remove" "MAXIMIZED-HORZ" "windowsize" "1274" "1374" "windowmove" "3204" "0"))
+  ;; this only works if the current terminal is the active window
+  (call-process "xdotool" nil nil nil "key" "Super_L+Right"))
 
 (defun snap-window-to-left (window-id)
-  (call-process "xdotool" nil nil nil "windowstate" "--remove" "MAXIMIZED_HORZ" window-id "windowsize" window-id "1280" "1373" "windowmove" window-id "1920" "0" "windowactivate" window-id))
+  (call-process "xdotool" nil nil nil "key" "--window" window-id "Super_L+Left"))
 
 (defun winlay-move-focus (xwindow)
   (call-process "xdotool" nil nil nil "windowactivate" xwindow))
