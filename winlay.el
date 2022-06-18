@@ -11,11 +11,12 @@
 
 (defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
   (interactive "P")
-  (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
-    (when (or ask-for-other-xwindow (not winlay--other-xwindow))
-      (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
-    (winlay-tile-xwindows winlay--other-xwindow)
-    (winlay-move-focus winlay--other-xwindow)))
+  (let ((emacs-window-id (get-current-window-id)))
+    (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
+      (when (or ask-for-other-xwindow (not winlay--other-xwindow))
+        (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
+      (winlay-tile-xwindows winlay--other-xwindow emacs-window-id)
+      (winlay-move-focus winlay--other-xwindow))))
 
 (defun winlay--pull-up-buffer-by-name (buffer-name)
   (interactive)
@@ -30,9 +31,9 @@
       (other-window 1))
     pdb-buffer))
 
-(defun winlay-tile-xwindows (other-xwindow)
-  (snap-current-terminal-to-right)
-  (snap-window-to-left other-xwindow))
+(defun winlay-tile-xwindows (window-to-left window-to-right)
+  (snap-window-to-right window-to-right)
+  (snap-window-to-left window-to-left))
 
 (defun winlay--ask-for-other-xwindow ()
   (let* ((xwindow-ids (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox")))
@@ -46,12 +47,14 @@
 (defun get-window-name (window-id)
   (car (drop-xdotool-debug-output (process-lines "xdotool" "getwindowname" window-id))))
 
-(defun snap-current-terminal-to-right ()
-  ;; this only works if the current terminal is the active window
-  (call-process "xdotool" nil nil nil "key" "Super_L+Right"))
+(defun get-current-window-id ()
+  (car (process-lines "xdotool" "getactivewindow")))
 
 (defun snap-window-to-left (window-id)
   (call-process "xdotool" nil nil nil "key" "--window" window-id "Super_L+Left"))
+
+(defun snap-window-to-right (window-id)
+  (call-process "xdotool" nil nil nil "key" "--window" window-id "Super_L+Right"))
 
 (defun winlay-move-focus (xwindow)
   (call-process "xdotool" nil nil nil "windowactivate" xwindow))
