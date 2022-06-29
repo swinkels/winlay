@@ -5,7 +5,17 @@
 
 (provide 'winlay)
 
-(setq winlay-pull-up-buffer-name-0 "*Messages*")
+(defgroup winlay nil
+  "Layout Emacs windows and X Windows."
+  :group 'convenience)
+
+(defcustom winlay-name-of-buffer-to-pull-up "*gud-gdb*"
+  "Name of buffer to pull up."
+  :type 'string :group 'winlay)
+
+(defcustom winlay-pattern-of-other-xwindow-title ".* Mozilla Firefox"
+  "Pattern of title of X window to tile with."
+  :type 'string :group 'winlay)
 
 ;; ID of current Emacs X window
 (setq winlay--emacs-xwindow nil)
@@ -15,7 +25,7 @@
 
 (defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
   (interactive "P")
-  (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
+  (when (winlay--pull-up-buffer-by-name winlay-name-of-buffer-to-pull-up)
     (unless winlay--emacs-xwindow
       (setq winlay--emacs-xwindow (get-current-xwindow)))
     (unless (and winlay--other-xwindow (not ask-for-other-xwindow))
@@ -63,7 +73,13 @@
   (snap-window-to-left window-to-left))
 
 (defun winlay--ask-for-other-xwindow ()
-  (let* ((xwindow-ids (mapcar 'string-to-number (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox"))))
+  (let* ((xwindow-ids
+          (mapcar 'string-to-number
+                  (drop-xdotool-debug-output
+                   (process-lines "xdotool"
+                                  "search"
+                                  "--name"
+                                  winlay-pattern-of-other-xwindow-title))))
          (xwindow-names (mapcar 'get-window-name xwindow-ids)))
     (cdr (assoc (helm-comp-read "Select window to tile: " xwindow-names)
                 (mapcar* #'cons xwindow-names xwindow-ids)))))
