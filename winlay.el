@@ -5,18 +5,45 @@
 
 (provide 'winlay)
 
-(setq winlay-pull-up-buffer-name-0 "*gud-pdb*")
+(setq winlay-pull-up-buffer-name-0 "*Messages*")
 
-(defvar winlay--other-xwindow nil "ID of X window to tile with")
+;; ID of current Emacs X window
+(setq winlay--emacs-xwindow nil)
+
+;; ID of X window to tile with
+(setq winlay--other-xwindow nil)
 
 (defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
   (interactive "P")
-  (let ((emacs-window-id (get-current-window-id)))
-    (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
-      (when (or ask-for-other-xwindow (not winlay--other-xwindow))
-        (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
-      (winlay-tile-xwindows winlay--other-xwindow emacs-window-id)
-      (winlay-move-focus winlay--other-xwindow))))
+  (when (winlay--pull-up-buffer-by-name winlay-pull-up-buffer-name-0)
+    (unless winlay--emacs-xwindow
+      (setq winlay--emacs-xwindow (get-current-xwindow)))
+    (unless (and winlay--other-xwindow (not ask-for-other-xwindow))
+      (setq winlay--other-xwindow (winlay--ask-for-other-xwindow)))
+    (winlay--execute-xwindow-commands
+     (winlay--get-tile-and-focus-commands
+      (winlay--get-xwindow-geometry winlay--emacs-xwindow)
+      (winlay--get-xwindow-geometry winlay--other-xwindow)
+      (winlay--get-display-geometry)))))
+
+(defun winlay--get-tile-and-focus-commands (xwindow-geometry
+                                            other-xwindow-geometry
+                                            display-geometry)
+  (let ((xwindow-id (plist-get xwindow-geometry 'window))
+        (other-xwindow-id (plist-get other-xwindow-geometry 'window))
+        (snapped-xwindow-size (winlay--snapped-size display-geometry)))
+    (seq-filter (lambda (element) element)
+                (list
+                 (unless (winlay--seems-snapped xwindow-geometry
+                                                snapped-xwindow-size)
+                   (cons #'snap-window-to-right xwindow-id))
+                 (unless (winlay--seems-snapped other-xwindow-geometry
+                                                snapped-xwindow-size)
+                   (cons #'snap-window-to-left other-xwindow-id))
+                 (cons #'winlay-move-focus other-xwindow-id)))))
+
+(defun winlay--execute-xwindow-commands (xwindow-commands)
+  (mapc (lambda (command) (funcall (car command) (cdr command))) xwindow-commands))
 
 (defun winlay--pull-up-buffer-by-name (buffer-name)
   (interactive)
@@ -36,7 +63,7 @@
   (snap-window-to-left window-to-left))
 
 (defun winlay--ask-for-other-xwindow ()
-  (let* ((xwindow-ids (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox")))
+  (let* ((xwindow-ids (mapcar 'string-to-number (drop-xdotool-debug-output (process-lines "xdotool" "search" "--name" ".* Mozilla Firefox"))))
          (xwindow-names (mapcar 'get-window-name xwindow-ids)))
     (cdr (assoc (helm-comp-read "Select window to tile: " xwindow-names)
                 (mapcar* #'cons xwindow-names xwindow-ids)))))
@@ -45,19 +72,58 @@
   (seq-remove '(lambda (line) (string-prefix-p "command: " line)) xdotool-output))
 
 (defun get-window-name (window-id)
-  (car (drop-xdotool-debug-output (process-lines "xdotool" "getwindowname" window-id))))
+  (car (drop-xdotool-debug-output (process-lines "xdotool" "getwindowname" (number-to-string window-id)))))
 
-(defun get-current-window-id ()
-  (car (process-lines "xdotool" "getactivewindow")))
+(defun get-current-xwindow ()
+  (string-to-number (car (process-lines "xdotool" "getactivewindow"))))
 
 (defun snap-window-to-left (window-id)
-  (call-process "xdotool" nil nil nil "key" "--window" window-id "Super_L+Left"))
+  (call-process "xdotool" nil nil nil "windowactivate" "--sync" (number-to-string window-id) "key" "Super_L+Left"))
 
 (defun snap-window-to-right (window-id)
-  (call-process "xdotool" nil nil nil "key" "--window" window-id "Super_L+Right"))
+  (call-process "xdotool" nil nil nil "windowactivate" "--sync" (number-to-string window-id) "key" "Super_L+Right"))
 
 (defun winlay-move-focus (xwindow)
-  (call-process "xdotool" nil nil nil "windowactivate" xwindow))
+  (call-process "xdotool" nil nil nil "windowactivate" (number-to-string xwindow)))
+
+(defun winlay--get-xwindow-geometry (xwindow-id)
+  (winlay--extract-property-list
+   (process-lines "xdotool"
+                  "getwindowgeometry"
+                  "--shell"
+                  (number-to-string xwindow-id))))
+
+(defun winlay--get-display-geometry ()
+  (winlay--extract-property-list
+   (process-lines "xdotool"
+                  "getdisplaygeometry"
+                  "--shell")))
+
+(defun winlay--extract-property-list (xdotool-shell-output)
+  (flatten-tree (mapcar #'winlay--extract-property
+                        (drop-xdotool-debug-output xdotool-shell-output))))
+
+(defun winlay--extract-property (line)
+  (let ((property-name (intern (downcase (car (split-string line "=")))))
+        (property-value (string-to-number (car (cdr (split-string line "="))))))
+    (list property-name property-value)))
+
+(defun winlay--seems-snapped (xwindow-size xwindow-snapped-size)
+  (let ((max-rel-diff 0.10))
+    (and (<= (winlay--rel-diff xwindow-snapped-size xwindow-size 'width)
+             max-rel-diff)
+         (<= (winlay--rel-diff xwindow-snapped-size xwindow-size 'height)
+             max-rel-diff))))
+
+(defun winlay--rel-diff (property-list-a property-list-b symbol)
+  (/ (abs (- (plist-get property-list-a symbol) (plist-get property-list-b symbol)))
+     (float (plist-get property-list-a symbol))))
+
+(defun winlay--snapped-size (display-geometry)
+  (list 'width
+        (/ (plist-get display-geometry 'width) 2)
+        'height
+        (plist-get display-geometry 'height)))
 
 (global-set-key (kbd "<f5>") 'winlay-pull-up-buffer-and-tile-xwindows)
 
