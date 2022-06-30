@@ -44,6 +44,8 @@ Clear this field if no buffer should be pulled-up."
       (winlay--get-xwindow-geometry winlay--other-xwindow)
       (winlay--get-display-geometry)))))
 
+;;; * Private functions
+
 (defun winlay--get-tile-and-focus-commands (xwindow-geometry
                                             other-xwindow-geometry
                                             display-geometry)
