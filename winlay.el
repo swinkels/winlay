@@ -5,17 +5,22 @@
 
 (provide 'winlay)
 
+;;; * Customization
+
 (defgroup winlay nil
   "Layout Emacs windows and X Windows."
   :group 'convenience)
 
-(defcustom winlay-name-of-buffer-to-pull-up "*gud-gdb*"
-  "Name of buffer to pull up."
+(defcustom winlay-name-of-buffer-to-pull-up "*gud-pdb*"
+  "Name of Emacs buffer to pull up.
+Clear this field if no buffer should be pulled-up."
   :type 'string :group 'winlay)
 
 (defcustom winlay-pattern-of-other-xwindow-title ".* Mozilla Firefox"
   "Pattern of title of X window to tile with."
   :type 'string :group 'winlay)
+
+;;; * Internal variables
 
 ;; ID of current Emacs X window
 (setq winlay--emacs-xwindow nil)
@@ -23,9 +28,12 @@
 ;; ID of X window to tile with
 (setq winlay--other-xwindow nil)
 
+;;; * Public functions
+
 (defun winlay-pull-up-buffer-and-tile-xwindows (ask-for-other-xwindow)
   (interactive "P")
-  (when (winlay--pull-up-buffer-by-name winlay-name-of-buffer-to-pull-up)
+  (when (or (= (length winlay-name-of-buffer-to-pull-up) 0)
+            (winlay--pull-up-buffer-by-name winlay-name-of-buffer-to-pull-up))
     (unless winlay--emacs-xwindow
       (setq winlay--emacs-xwindow (get-current-xwindow)))
     (unless (and winlay--other-xwindow (not ask-for-other-xwindow))
