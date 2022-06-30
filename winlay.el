@@ -99,7 +99,7 @@ Clear this field if no buffer should be pulled-up."
   (car (drop-xdotool-debug-output (process-lines "xdotool" "getwindowname" (number-to-string window-id)))))
 
 (defun get-current-xwindow ()
-  (string-to-number (car (process-lines "xdotool" "getactivewindow"))))
+  (string-to-number (car (drop-xdotool-debug-output (process-lines "xdotool" "getactivewindow")))))
 
 (defun snap-window-to-left (window-id)
   (call-process "xdotool" nil nil nil "windowactivate" "--sync" (number-to-string window-id) "key" "Super_L+Left"))
